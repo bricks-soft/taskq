@@ -228,11 +228,11 @@ func (q *Queue) Release(msg *taskq.Message) error {
 	// and lose a message.
 	pipe := q.redis.TxPipeline()
 	// When Release a msg, ack it before we delete msg.
-	if err := pipe.XAck(msg.Ctx, q.stream, q.streamGroup, msg.ID).Err(); err != nil {
+	if err := pipe.XAck(msg.Ctx, q.stream, q.streamGroup, msg.ReservationID).Err(); err != nil {
 		return err
 	}
 
-	err := pipe.XDel(msg.Ctx, q.stream, msg.ID).Err()
+	err := pipe.XDel(msg.Ctx, q.stream, msg.ReservationID).Err()
 	if err != nil {
 		return err
 	}
@@ -249,10 +249,10 @@ func (q *Queue) Release(msg *taskq.Message) error {
 
 // Delete deletes the message from the queue.
 func (q *Queue) Delete(msg *taskq.Message) error {
-	if err := q.redis.XAck(msg.Ctx, q.stream, q.streamGroup, msg.ID).Err(); err != nil {
+	if err := q.redis.XAck(msg.Ctx, q.stream, q.streamGroup, msg.ReservationID).Err(); err != nil {
 		return err
 	}
-	return q.redis.XDel(msg.Ctx, q.stream, msg.ID).Err()
+	return q.redis.XDel(msg.Ctx, q.stream, msg.ReservationID).Err()
 }
 
 // Purge deletes all messages from the queue.
@@ -458,8 +458,10 @@ func unmarshalMessage(msg *taskq.Message, xmsg *redis.XMessage) error {
 		return err
 	}
 
-	// FIXME FORK: why to override the original msg.ID with redis xmsg.ID?
-	//msg.ID = xmsg.ID
+	// FIXME FORK: was setting msg.ID instead.
+	// 		Required to be able to Release/Delete the msg.
+	//		Changed to use ReservationID the same as SQS/ironmq.
+	msg.ReservationID = xmsg.ID
 	if msg.ReservedCount == 0 {
 		msg.ReservedCount = 1
 	}
