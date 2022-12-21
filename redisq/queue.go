@@ -458,7 +458,8 @@ func unmarshalMessage(msg *taskq.Message, xmsg *redis.XMessage) error {
 		return err
 	}
 
-	msg.ID = xmsg.ID
+	// FIXME FORK: why to override the original msg.ID with redis xmsg.ID?
+	//msg.ID = xmsg.ID
 	if msg.ReservedCount == 0 {
 		msg.ReservedCount = 1
 	}
